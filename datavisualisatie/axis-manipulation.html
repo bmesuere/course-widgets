@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Axis Manipulation Playground (Trustworthiness Demo)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { theme: { extend: { fontSize: { 'mega': ['2.2rem', { lineHeight: '1.1' }] } } } };</script>
+  <style>
+    html,
+    body {
+      height: 100%;
+    }
+
+    .btn {
+      @apply px-4 py-2 rounded-xl font-semibold border border-slate-300 bg-white hover:bg-slate-50 active:scale-[0.99] transition;
+    }
+
+    .btn-primary {
+      @apply border-slate-900 bg-slate-900 text-white hover:bg-slate-800;
+    }
+
+    .btn-danger {
+      @apply border-rose-700 bg-rose-600 text-white hover:bg-rose-500;
+    }
+
+    .kbd {
+      @apply font-mono text-xs px-2 py-1 rounded bg-slate-100 border border-slate-300;
+    }
+
+    textarea {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+  </style>
+</head>
+
+<body class="bg-slate-50 text-slate-900">
+  <div class="min-h-full flex flex-col">
+    <header class="px-6 py-5 border-b border-slate-200 bg-white/50 backdrop-blur-sm sticky top-0 z-10">
+      <div class="flex flex-wrap items-center justify-between gap-4 max-w-6xl mx-auto w-full">
+        <div>
+          <div class="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-900">Axis manipulation</div>
+          <div class="text-slate-500 mt-1 text-sm font-medium">
+            How to mislead with axes. Truncate the baseline to exaggerate change.
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <!-- Header buttons removed, moved to plot area -->
+        </div>
+      </div>
+    </header>
+
+    <main class="flex-1 px-4 py-6 md:px-6">
+      <div class="grid lg:grid-cols-3 gap-6 items-start max-w-6xl mx-auto">
+
+        <section class="lg:col-span-2 space-y-4">
+          <!-- Nav & Title -->
+          <div class="flex items-center justify-between bg-white/60 border border-slate-200 rounded-2xl p-4 shadow-sm">
+            <button id="prevBtn" class="btn text-slate-500 hover:text-slate-900">
+              ← Prev
+            </button>
+            <div class="text-center">
+              <div id="datasetTitle" class="text-xl md:text-2xl font-bold text-slate-900 whitespace-nowrap">Normal</div>
+              <div id="datasetMeta" class="text-xs text-slate-500 font-mono mt-0.5 whitespace-nowrap">Displaying full
+                range</div>
+            </div>
+            <button id="nextBtn" class="btn text-slate-500 hover:text-slate-900">
+              Next →
+            </button>
+          </div>
+
+          <!-- Plot Area -->
+          <div class="relative bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+            <canvas id="chart" width="980" height="580" class="w-full h-auto rounded-xl bg-slate-50"></canvas>
+          </div>
+        </section>
+
+        <section class="bg-white/60 border border-slate-200 rounded-2xl p-4">
+          <h2 class="text-xl md:text-2xl font-bold">Controls</h2>
+
+          <div class="mt-3 space-y-3">
+            <div>
+              <div class="text-slate-600 text-sm">Y-axis min</div>
+              <input id="yMin" type="range" min="0" max="100" value="0" class="w-full" />
+              <div id="yMinLabel" class="text-slate-800 font-semibold mt-1">Auto (full range)</div>
+            </div>
+
+            <div>
+              <div class="text-slate-600 text-sm">Y-axis max</div>
+              <input id="yMax" type="range" min="0" max="100" value="100" class="w-full" />
+              <div id="yMaxLabel" class="text-slate-800 font-semibold mt-1">Auto (full range)</div>
+            </div>
+
+            <div class="pt-2 border-t border-slate-200 text-slate-600 text-sm leading-relaxed">
+              Adjust the sliders above to see how truncating the y-axis changes the story the data tells.
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <script>
+    (() => {
+      const chart = document.getElementById('chart');
+      const ctx = chart.getContext('2d');
+
+      const yMinEl = document.getElementById('yMin');
+      const yMaxEl = document.getElementById('yMax');
+      const yMinLabel = document.getElementById('yMinLabel');
+      const yMaxLabel = document.getElementById('yMaxLabel');
+
+      const prevBtn = document.getElementById('prevBtn');
+      const nextBtn = document.getElementById('nextBtn');
+      const datasetTitle = document.getElementById('datasetTitle');
+      const datasetMeta = document.getElementById('datasetMeta');
+
+      /** Default data. */
+      const data = [
+        { label: "2016", value: 121 },
+        { label: "2017", value: 124 },
+        { label: "2018", value: 126 },
+        { label: "2019", value: 129 },
+        { label: "2020", value: 133 },
+        { label: "2021", value: 135 },
+        { label: "2022", value: 138 },
+        { label: "2023", value: 141 },
+        { label: "2024", value: 145 },
+      ];
+
+      const MODES = [
+        { name: "Trend", sub: "Tight focus on the data change", min: 115, max: 155 },
+        { name: "Zero Baseline", sub: "Honest context, zero included", min: 0, max: 160 },
+        { name: "Exaggerated", sub: "Extreme truncation clips data", min: 135, max: 146 }
+      ];
+      let modeIdx = 0;
+
+      let display = { min: 0, max: 200 };
+      let target = { min: 0, max: 200 };
+
+      function setMode(idx) {
+        modeIdx = (idx + MODES.length) % MODES.length;
+        const m = MODES[modeIdx];
+
+        target.min = m.min;
+        target.max = m.max;
+
+        yMinEl.value = target.min;
+        yMaxEl.value = target.max;
+
+        datasetTitle.textContent = m.name;
+        datasetMeta.textContent = m.sub;
+      }
+
+      function lerp(a, b, t) { return a + (b - a) * t; }
+
+      function tick() {
+        display.min = lerp(display.min, target.min, 0.1);
+        display.max = lerp(display.max, target.max, 0.1);
+
+        draw();
+        requestAnimationFrame(tick);
+      }
+
+      function draw() {
+        const W = chart.width, H = chart.height;
+        ctx.clearRect(0, 0, W, H);
+        ctx.fillStyle = "rgb(248,250,252)";
+        ctx.fillRect(0, 0, W, H);
+
+        const padL = 70, padR = 40, padT = 50, padB = 70;
+        const plotW = W - padL - padR;
+        const plotH = H - padT - padB;
+
+        const min = display.min;
+        const max = display.max;
+        const range = max - min || 1;
+
+        const xFor = (i) => padL + (i / (data.length - 1)) * plotW;
+        const yFor = (v) => padT + (1 - (v - min) / range) * plotH;
+
+        // Clip plot area to handle "Exaggerated" mode clipping
+        ctx.save();
+        ctx.beginPath();
+        // Allow some horizontal overflow for the dots (10px) but keep vertical clipping
+        ctx.rect(padL - 10, padT, plotW + 20, plotH);
+        ctx.clip();
+
+        // Determine adaptive step once for both grid and labels
+        const tRange = Math.abs(target.max - target.min);
+        const step = tRange > 100 ? 50 : (tRange > 40 ? 20 : 5);
+
+        // Grid (stabilized and synchronized)
+        ctx.strokeStyle = "rgba(100,116,139,0.1)";
+        ctx.lineWidth = 2;
+        const startVal = Math.floor(min / step) * step;
+        for (let val = startVal; val <= max + step; val += step) {
+          const y = yFor(val);
+          if (y >= padT && y <= padT + plotH) {
+            ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(padL + plotW, y); ctx.stroke();
+          }
+        }
+
+        // Line
+        ctx.strokeStyle = "rgba(2,132,199,1)";
+        ctx.lineWidth = 5;
+        ctx.lineJoin = "round";
+        ctx.beginPath();
+        data.forEach((d, i) => {
+          if (i === 0) ctx.moveTo(xFor(i), yFor(d.value));
+          else ctx.lineTo(xFor(i), yFor(d.value));
+        });
+        ctx.stroke();
+
+        // Points
+        data.forEach((d, i) => {
+          ctx.fillStyle = "#fff";
+          ctx.strokeStyle = "rgba(2,132,199,1)";
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(xFor(i), yFor(d.value), 6, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+        });
+
+        ctx.restore();
+
+        // Axes (drawn outside clip)
+        ctx.strokeStyle = "rgba(15,23,42,0.6)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(padL, padT); ctx.lineTo(padL, padT + plotH); ctx.lineTo(padL + plotW, padT + plotH);
+        ctx.stroke();
+
+        // Labels
+        ctx.fillStyle = "rgba(71,85,105,1)";
+        ctx.font = "bold 14px monospace";
+        ctx.textAlign = "right"; ctx.textBaseline = "middle";
+
+        // Dynamic Y Labels (synchronized with grid)
+        for (let val = startVal; val <= max + step; val += step) {
+          const y = yFor(val);
+          if (y >= padT - 5 && y <= padT + plotH + 5) {
+            ctx.fillText(val.toFixed(0), padL - 10, y);
+          }
+        }
+
+        ctx.textAlign = "center"; ctx.textBaseline = "top";
+        data.forEach((d, i) => {
+          ctx.fillText(d.label, xFor(i), padT + plotH + 12);
+        });
+
+        // Legend/Title overlay
+        ctx.textAlign = "left"; ctx.textBaseline = "top";
+        ctx.font = "bold 20px sans-serif";
+        ctx.fillStyle = "#1e293b";
+        ctx.fillText("Trend Analysis", padL, 10);
+
+        yMinLabel.textContent = `Y-min: ${target.min.toFixed(0)}`;
+        yMaxLabel.textContent = `Y-max: ${target.max.toFixed(0)}`;
+      }
+
+      // Events
+      yMinEl.addEventListener('input', () => {
+        target.min = parseFloat(yMinEl.value);
+      });
+      yMaxEl.addEventListener('input', () => {
+        target.max = parseFloat(yMaxEl.value);
+      });
+
+      prevBtn.addEventListener('click', () => setMode(modeIdx - 1));
+      nextBtn.addEventListener('click', () => setMode(modeIdx + 1));
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight') setMode(modeIdx + 1);
+        if (e.key === 'ArrowLeft') setMode(modeIdx - 1);
+      });
+
+      // Init logic
+      yMinEl.min = -50; yMinEl.max = 200;
+      yMaxEl.min = 50; yMaxEl.max = 300;
+
+      setMode(0); // Start in Trend
+      display.min = target.min;
+      display.max = target.max;
+
+      tick();
+    })();
+  </script>
+</body>
+
+</html>

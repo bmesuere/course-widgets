@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Preattentive Pop‑Out Lab (Timed Find‑the‑Target)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { theme: { extend: { fontSize: { 'mega': ['2.2rem', { lineHeight: '1.1' }] } } } };</script>
+  <style>
+    html,
+    body {
+      height: 100%;
+    }
+
+    .btn {
+      @apply px-4 py-2 rounded-xl font-semibold border border-slate-300 bg-white hover:bg-slate-50 active:scale-[0.99] transition;
+    }
+
+    .btn-primary {
+      @apply border-slate-900 bg-slate-900 text-white hover:bg-slate-800;
+    }
+
+    .btn-danger {
+      @apply border-rose-700 bg-rose-600 text-white hover:bg-rose-500;
+    }
+
+    .kbd {
+      @apply font-mono text-xs px-2 py-1 rounded bg-slate-100 border border-slate-300;
+    }
+
+    @keyframes pop {
+      0% {
+        transform: scale(0.5);
+        opacity: 0;
+      }
+
+      50% {
+        transform: scale(1.2);
+        opacity: 1;
+      }
+
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    .animate-pop {
+      animation: pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+  </style>
+</head>
+
+<body class="bg-slate-50 text-slate-900">
+  <div class="min-h-full flex flex-col">
+    <header class="px-5 py-4 border-b border-slate-200">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div class="text-2xl md:text-3xl font-extrabold tracking-tight">Preattentive processing</div>
+          <div class="text-slate-600 mt-1">
+            Press <span class="kbd">Start</span> to see a brief flash. Can you spot the target?
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="flex-1 px-5 py-5">
+      <div class="max-w-6xl mx-auto grid lg:grid-cols-[320px_1fr] gap-6 items-start">
+
+        <!-- Controls (Sidebar) -->
+        <section class="bg-white/60 border border-slate-200 rounded-2xl p-5 space-y-6">
+          <div class="space-y-4">
+            <h2 class="text-lg font-bold text-slate-900 border-b border-slate-200 pb-2">Experiment Settings</h2>
+
+            <div class="space-y-4">
+              <label class="block">
+                <div class="text-slate-600 text-sm font-medium mb-1">Mode</div>
+                <select id="mode"
+                  class="w-full rounded-xl border border-slate-300 text-slate-900 px-3 py-2.5 font-semibold bg-white">
+                  <option value="color">Color pop‑out</option>
+                  <option value="orientation">Orientation pop‑out</option>
+                  <option value="shape">Shape pop‑out</option>
+                  <option value="size">Size pop‑out</option>
+                  <option value="conjunction">Conjunction search</option>
+                </select>
+              </label>
+
+              <label class="block">
+                <div class="text-slate-600 text-sm font-medium mb-1">Grid Size</div>
+                <select id="grid"
+                  class="w-full rounded-xl border border-slate-300 text-slate-900 px-3 py-2.5 font-semibold bg-white">
+                  <option value="8">8×8</option>
+                  <option value="10" selected>10×10</option>
+                  <option value="12">12×12</option>
+                  <option value="14">14×14</option>
+                </select>
+              </label>
+
+              <label class="block">
+                <div class="flex justify-between items-center mb-1">
+                  <div class="text-slate-600 text-sm font-medium">Flash Duration</div>
+                  <div id="durationVal" class="text-slate-500 text-xs font-mono">100ms</div>
+                </div>
+                <input id="duration" type="range" min="16" max="1000" step="1" value="100"
+                  class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-slate-900">
+              </label>
+
+              <div class="pt-2 flex flex-col gap-3">
+                <button id="startBtn" class="btn btn-primary w-full py-3 text-lg shadow-sm">Start Trial</button>
+                <button id="revealBtn" class="btn btn-danger w-full py-3 text-lg shadow-sm" disabled>Reveal
+                  Answer</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="pt-4 border-t border-slate-200">
+            <div class="text-slate-500 text-xs uppercase tracking-wider font-bold mb-1">Status</div>
+            <div id="status" class="text-xl md:text-2xl font-bold text-slate-800 leading-tight">Ready.</div>
+          </div>
+
+          <div class="p-3 bg-slate-100/50 rounded-xl border border-slate-200 text-sm">
+            <div class="font-semibold text-slate-900 mb-1">Target Description</div>
+            <div id="taskText" class="text-slate-600 leading-snug"></div>
+          </div>
+
+          <div class="text-xs text-slate-400">
+            Keyboard shortcuts:<br>
+            <span class="font-mono bg-slate-100 px-1 rounded text-slate-600">Space</span> Start<br>
+            <span class="font-mono bg-slate-100 px-1 rounded text-slate-600">R</span> Reveal<br>
+            <span class="font-mono bg-slate-100 px-1 rounded text-slate-600">F</span> Fullscreen
+          </div>
+        </section>
+
+        <!-- Grid Area (Main) -->
+        <section
+          class="min-h-[600px] flex items-center justify-center relative rounded-3xl border border-slate-200 bg-slate-50 p-6 overflow-hidden shadow-sm">
+
+          <!-- Overlay for Countdown -->
+          <div id="overlay"
+            class="absolute inset-0 z-20 flex items-center justify-center bg-white/95 hidden backdrop-blur-sm transition-opacity">
+            <div id="countdown" class="text-[12rem] font-black text-slate-900 tracking-tighter select-none opacity-0">3
+            </div>
+          </div>
+
+          <!-- The Grid -->
+          <div id="gridWrap" class="w-full opacity-100 transition-opacity duration-0"></div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <script>
+    (() => {
+      // DOM
+      const modeEl = document.getElementById('mode');
+      const gridEl = document.getElementById('grid');
+      const durationEl = document.getElementById('duration');
+      const durationValEl = document.getElementById('durationVal');
+      const startBtn = document.getElementById('startBtn');
+      const revealBtn = document.getElementById('revealBtn');
+      const statusEl = document.getElementById('status');
+      const taskText = document.getElementById('taskText');
+      const gridWrap = document.getElementById('gridWrap');
+      const overlay = document.getElementById('overlay');
+      const countdownEl = document.getElementById('countdown');
+
+      // State
+      let targetIndex = -1;
+      let gridN = 10;
+      let isBusy = false; // during countdown or flash
+
+      function toggleFullscreen() {
+        if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+        else document.exitFullscreen?.();
+      }
+
+      durationEl.addEventListener('input', () => {
+        durationValEl.textContent = durationEl.value + 'ms';
+      });
+
+      function setTaskText() {
+        const mode = modeEl.value;
+        const map = {
+          color: "Find the one item that differs in <span class='text-black font-semibold'>color</span>.",
+          shape: "Find the one item that differs in <span class='text-black font-semibold'>shape</span>.",
+          orientation: "Find the one item that differs in <span class='text-black font-semibold'>orientation</span>.",
+          size: "Find the one item that differs in <span class='text-black font-semibold'>size</span>.",
+          conjunction: "Find the <span class='text-black font-semibold'>red circle</span> among red squares and blue circles (conjunction search)."
+        };
+        taskText.innerHTML = map[mode] || map.color;
+      }
+
+      function mkSVG({ shape, color, angle, scale }) {
+        // Simple inline SVG so it scales crisply.
+        const size = 34;
+        const s = size;
+        const fill = color;
+        const stroke = "rgba(15,23,42,0.15)";
+        let path = "";
+
+        if (shape === "circle") {
+          path = `<circle cx="${s / 2}" cy="${s / 2}" r="${s * 0.28}" fill="${fill}" stroke="${stroke}" stroke-width="2"/>`;
+        } else if (shape === "square") {
+          const w = s * 0.56;
+          path = `<rect x="${(s - w) / 2}" y="${(s - w) / 2}" width="${w}" height="${w}" rx="${s * 0.08}" fill="${fill}" stroke="${stroke}" stroke-width="2"/>`;
+        } else if (shape === "triangle") {
+          const a = s * 0.62;
+          const cx = s / 2, cy = s / 2;
+          const p1 = `${cx},${cy - a / 2}`;
+          const p2 = `${cx - a / 2},${cy + a / 2}`;
+          const p3 = `${cx + a / 2},${cy + a / 2}`;
+          path = `<polygon points="${p1} ${p2} ${p3}" fill="${fill}" stroke="${stroke}" stroke-width="2"/>`;
+        } else if (shape === "bar") {
+          const w = s * 0.12, h = s * 0.62;
+          path = `<rect x="${(s - w) / 2}" y="${(s - h) / 2}" width="${w}" height="${h}" rx="${w / 2}" fill="${fill}" stroke="${stroke}" stroke-width="2"/>`;
+        }
+
+        return `<svg width="${s}" height="${s}" viewBox="0 0 ${s} ${s}" style="transform: rotate(${angle}deg) scale(${scale});">${path}</svg>`;
+      }
+
+      function itemSpec(isTarget) {
+        const mode = modeEl.value;
+        const base = { shape: "circle", color: "#60a5fa", angle: 0, scale: 1.0 };
+        if (mode === "color") return isTarget ? { ...base, color: "#fbbf24" } : base;
+        if (mode === "shape") return isTarget ? { ...base, shape: "square" } : base;
+        if (mode === "orientation") {
+          const b = { shape: "bar", color: "#a78bfa", angle: 0, scale: 1.0 };
+          return isTarget ? { ...b, angle: 45 } : b;
+        }
+        if (mode === "size") {
+          const b = { shape: "circle", color: "#34d399", angle: 0, scale: 1.0 };
+          return isTarget ? { ...b, scale: 1.45 } : b;
+        }
+        if (mode === "conjunction") {
+          if (isTarget) return { shape: "circle", color: "#f87171", angle: 0, scale: 1.1 };
+          return (Math.random() < 0.5)
+            ? { shape: "square", color: "#f87171", angle: 0, scale: 1.0 }
+            : { shape: "circle", color: "#60a5fa", angle: 0, scale: 1.0 };
+        }
+        return base;
+      }
+
+      function buildGrid() {
+        setTaskText();
+        gridN = Number(gridEl.value);
+        const total = gridN * gridN;
+        targetIndex = Math.floor(Math.random() * total);
+
+        gridWrap.innerHTML = "";
+        const grid = document.createElement('div');
+        grid.className = "grid gap-1.5";
+        grid.style.gridTemplateColumns = `repeat(${gridN}, minmax(0, 1fr))`;
+        grid.style.maxWidth = "min(100%, 800px)";
+        grid.style.margin = "0 auto";
+
+        for (let i = 0; i < total; i++) {
+          const isTarget = i === targetIndex;
+          const spec = itemSpec(isTarget);
+          const div = document.createElement('div');
+          // Removed button/clickability essentially, now just visual items
+          div.className = "aspect-square rounded-xl border border-slate-200 bg-white/60 flex items-center justify-center";
+          div.innerHTML = mkSVG(spec);
+          div.dataset.idx = String(i);
+          grid.appendChild(div);
+        }
+        gridWrap.appendChild(grid);
+      }
+
+      function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+      async function runSequence() {
+        if (isBusy) return;
+        isBusy = true;
+        startBtn.disabled = true;
+        revealBtn.disabled = true;
+        gridWrap.style.opacity = "0"; // Ensure hidden initially
+
+        statusEl.textContent = "Get ready...";
+
+        // 1. Prepare the grid (hidden)
+        buildGrid();
+
+        // 2. Countdown (Slower: 1s per number)
+        overlay.classList.remove('hidden');
+        countdownEl.classList.remove('animate-pop'); // reset
+
+        for (let i = 3; i > 0; i--) {
+          countdownEl.textContent = i;
+
+          // Re-trigger animation
+          countdownEl.classList.remove('animate-pop');
+          void countdownEl.offsetWidth; // force reflow
+          countdownEl.classList.add('animate-pop');
+
+          await sleep(1000);
+        }
+        overlay.classList.add('hidden');
+
+        // 3. Flash (variable duration)
+        const flashMs = Number(durationEl.value);
+        gridWrap.style.opacity = "1";
+
+        requestAnimationFrame(() => {
+          setTimeout(() => {
+            gridWrap.style.opacity = "0";
+            finishSequence();
+          }, flashMs);
+        });
+      }
+
+      function finishSequence() {
+        isBusy = false;
+        startBtn.disabled = false;
+        revealBtn.disabled = false;
+        statusEl.textContent = "Did you see it?";
+        startBtn.textContent = "Restart";
+      }
+
+      function reveal() {
+        if (isBusy) return;
+        gridWrap.style.opacity = "1";
+        revealBtn.disabled = true;
+
+        const el = gridWrap.querySelector(`[data-idx="${targetIndex}"]`);
+        if (el) {
+          el.classList.add("ring-4", "ring-rose-500", "ring-offset-2", "bg-yellow-50");
+          // optional animation
+          el.animate([
+            { transform: 'scale(1)' },
+            { transform: 'scale(1.2)' },
+            { transform: 'scale(1)' }
+          ], { duration: 300 });
+        }
+        statusEl.textContent = "There it is!";
+      }
+
+      // Events
+      startBtn.addEventListener('click', runSequence);
+      revealBtn.addEventListener('click', reveal);
+
+      [modeEl, gridEl].forEach(el => el.addEventListener('change', () => {
+        // If they change settings, reset the view logic slightly?
+        // Not strictly necessary, but let's hide grid if it was revealed
+        gridWrap.style.opacity = "0";
+        statusEl.textContent = "Ready.";
+        revealBtn.disabled = true;
+      }));
+
+      document.addEventListener('keydown', (e) => {
+        if (e.repeat) return;
+        if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); runSequence(); }
+        if (e.key === 'r' || e.key === 'R') { reveal(); }
+        if (e.key === 'f' || e.key === 'F') { toggleFullscreen(); }
+      });
+
+      // Init
+      setTaskText();
+      gridWrap.style.opacity = "0"; // ensure hidden at start
+    })();
+  </script>
+</body>
+
+</html>

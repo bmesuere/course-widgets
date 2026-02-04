@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>The 15 Game</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: { extend: { fontSize: { 'mega': ['2.5rem', { lineHeight: '1.1' }] } } }
+    }
+  </script>
+  <style>
+    /* Smooth projection vibes */
+    html,
+    body {
+      height: 100%;
+    }
+
+    .btn {
+      @apply px-4 py-2 rounded-xl font-semibold border border-slate-300 bg-white hover:bg-slate-50 active:scale-[0.99] transition;
+    }
+
+    .btn-primary {
+      @apply border-slate-900 bg-slate-900 text-white hover:bg-slate-800;
+    }
+
+    .btn-danger {
+      @apply border-rose-700 bg-rose-600 text-white hover:bg-rose-500;
+    }
+
+    .badge {
+      @apply inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold;
+    }
+
+    .kbd {
+      @apply font-mono text-xs px-2 py-1 rounded bg-slate-100 border border-slate-300;
+    }
+
+    /* Stable height for grid area */
+    #numberGrid {
+      min-height: 120px;
+    }
+  </style>
+</head>
+
+<body class="bg-slate-50 text-slate-900">
+  <div class="min-h-full flex flex-col">
+    <header class="px-5 py-4 border-b border-slate-200">
+      <div class="flex flex-wrap items-center gap-3 justify-between">
+        <div>
+          <div class="text-2xl md:text-3xl font-extrabold tracking-tight">The “15 Game”</div>
+          <div class="text-slate-600 mt-1 text-sm md:text-base">
+            Pick numbers 1–9. First player to hold <span class="font-semibold text-black">any triple summing to
+              15</span> wins.
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="resetBtn" class="btn btn-danger">Reset</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="flex-1 px-5 py-5 max-w-6xl mx-auto w-full">
+      <!-- Top: large available numbers -->
+      <section class="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm mb-6">
+        <div class="flex flex-wrap items-center justify-between gap-6 mb-8">
+          <h2 class="text-2xl md:text-3xl font-black tracking-tight">Available Numbers</h2>
+          <div id="turnIndicator"
+            class="flex items-center gap-4 px-6 py-3 rounded-2xl transition-all duration-300 shadow-sm border">
+            <div id="playerIndicatorIcon" class="w-5 h-5 rounded-full animate-pulse"></div>
+            <span id="turnBadgeText" class="font-black text-xl">Player A’s turn</span>
+          </div>
+        </div>
+
+        <div id="numberGrid" class="flex flex-wrap justify-center gap-4 md:gap-6 transition-all duration-500"
+          aria-label="Numbers 1 to 9"></div>
+
+        <div class="mt-8 flex flex-wrap items-center justify-between gap-4">
+          <div class="flex gap-3">
+            <button id="undoBtn" class="btn text-lg py-3 px-6">Undo</button>
+            <button id="revealBtn" class="btn btn-primary text-lg py-3 px-6">Rearrange</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Dashboard -->
+      <div class="grid md:grid-cols-2 gap-6 items-start">
+
+        <!-- Picks -->
+        <section class="bg-white/60 border border-slate-200 rounded-2xl p-5 space-y-4">
+          <h2 class="text-xl font-bold border-b pb-2">Selections</h2>
+          <div class="grid grid-cols-2 gap-4">
+            <div class="rounded-2xl border border-slate-200 p-4 bg-sky-50/50">
+              <div class="font-bold text-sky-900 text-sm uppercase tracking-wider">Player A</div>
+              <div id="aPicks" class="mt-1 text-4xl font-black text-sky-700">–</div>
+            </div>
+            <div class="rounded-2xl border border-slate-200 p-4 bg-amber-50/50">
+              <div class="font-bold text-amber-900 text-sm uppercase tracking-wider">Player B</div>
+              <div id="bPicks" class="mt-1 text-4xl font-black text-amber-700">–</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Status & Insight -->
+        <section class="bg-white/60 border border-slate-200 rounded-2xl p-5 h-full space-y-4">
+          <h2 class="text-xl font-bold border-b pb-2">Status</h2>
+          <div id="winPanel" class="rounded-2xl border border-sky-200 p-4 bg-sky-100/50 hidden">
+            <div class="font-bold text-slate-800 text-sm uppercase tracking-wider">Game Result</div>
+            <div id="winText" class="mt-2 text-2xl font-black text-slate-900"></div>
+            <div id="winDetail" class="mt-1 text-slate-700 font-medium italic"></div>
+          </div>
+          <div id="noWinnerYet"
+            class="p-4 text-slate-400 font-medium text-center border-2 border-dashed border-slate-200 rounded-2xl">
+            Waiting for winner...
+          </div>
+          <div id="pedagogySection" class="rounded-2xl border border-emerald-200 p-4 bg-emerald-50/50 hidden">
+            <div class="font-bold text-emerald-900 text-sm uppercase tracking-wider">The Insight</div>
+            <div class="mt-2 text-emerald-800 font-medium leading-relaxed">
+              Same logic, different view. Representation changes everything.
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+  </div>
+
+  <script>
+      (() => {
+        // DOM
+        const numberGrid = document.getElementById('numberGrid');
+        const turnIndicator = document.getElementById('turnIndicator');
+        const turnBadgeText = document.getElementById('turnBadgeText');
+        const playerIndicatorIcon = document.getElementById('playerIndicatorIcon');
+        const noWinnerYet = document.getElementById('noWinnerYet');
+        const winPanel = document.getElementById('winPanel');
+        const pedagogySection = document.getElementById('pedagogySection');
+        const aPicksEl = document.getElementById('aPicks');
+        const bPicksEl = document.getElementById('bPicks');
+        const winText = document.getElementById('winText');
+        const winDetail = document.getElementById('winDetail');
+        const resetBtn = document.getElementById('resetBtn');
+        const undoBtn = document.getElementById('undoBtn');
+        const revealBtn = document.getElementById('revealBtn');
+
+        // State
+        let turn = 'A';
+        let history = []; // stores {num, player} objects in order
+        let picks = { A: new Set(), B: new Set() };
+        let reveal = false;
+        let locked = false;
+
+        function triplesThatSumTo15(set) {
+          const arr = [...set].sort((a, b) => a - b);
+          const wins = [];
+          for (let i = 0; i < arr.length; i++) {
+            for (let j = i + 1; j < arr.length; j++) {
+              for (let k = j + 1; k < arr.length; k++) {
+                if (arr[i] + arr[j] + arr[k] === 15) wins.push([arr[i], arr[j], arr[k]]);
+              }
+            }
+          }
+          return wins;
+        }
+
+        function renderNumberBoard() {
+          const order = reveal ? [4, 9, 2, 3, 5, 7, 8, 1, 6] : [1, 2, 3, 4, 5, 6, 7, 8, 9];
+
+          if (reveal) {
+            numberGrid.className = "grid grid-cols-3 gap-3 md:gap-5 max-w-[320px] md:max-w-md mx-auto transition-all duration-500";
+          } else {
+            numberGrid.className = "flex flex-wrap justify-center gap-4 md:gap-6 transition-all duration-500";
+          }
+
+          numberGrid.innerHTML = '';
+          for (const n of order) {
+            const takenByA = picks.A.has(n);
+            const takenByB = picks.B.has(n);
+            const btn = document.createElement('button');
+            btn.className =
+              `w-16 h-16 md:w-24 md:h-24 rounded-3xl border-2 text-4xl md:text-5xl font-black tracking-tight flex items-center justify-center
+         transition-all duration-200 active:scale-[0.8] ${takenByA ? 'bg-sky-500 border-sky-600 text-white shadow-xl shadow-sky-200' : ''} ${takenByB ? 'bg-amber-500 border-amber-600 text-white shadow-xl shadow-amber-200' : ''}
+         ${(!takenByA && !takenByB && !locked) ? 'bg-white border-slate-200 hover:border-slate-400 hover:shadow-lg' : ''}
+         ${locked && !takenByA && !takenByB ? 'opacity-20 cursor-not-allowed scale-95' : ''}`;
+            btn.textContent = n;
+            btn.disabled = locked || takenByA || takenByB;
+            btn.addEventListener('click', () => pickNumber(n));
+            numberGrid.appendChild(btn);
+          }
+        }
+
+        function updateBadges() {
+          if (turn === 'A') {
+            turnIndicator.className = "flex items-center gap-4 px-6 py-3 rounded-2xl bg-sky-100 border border-sky-300 text-sky-800 shadow-sm";
+            playerIndicatorIcon.className = "w-4 h-4 rounded-full bg-sky-500 animate-pulse";
+            turnBadgeText.textContent = "Player A’s turn";
+          } else {
+            turnIndicator.className = "flex items-center gap-4 px-6 py-3 rounded-2xl bg-amber-100 border border-amber-300 text-amber-800 shadow-sm";
+            playerIndicatorIcon.className = "w-4 h-4 rounded-full bg-amber-500 animate-pulse";
+            turnBadgeText.textContent = "Player B’s turn";
+          }
+        }
+
+        function updatePicksText() {
+          // Show in chronological order of appearance in history
+          const aHistory = history.filter(h => h.player === 'A').map(h => h.num);
+          const bHistory = history.filter(h => h.player === 'B').map(h => h.num);
+
+          aPicksEl.textContent = aHistory.length ? aHistory.join(' ') : '–';
+          bPicksEl.textContent = bHistory.length ? bHistory.join(' ') : '–';
+        }
+
+        function updateWinState() {
+          const aWins = triplesThatSumTo15(picks.A);
+          const bWins = triplesThatSumTo15(picks.B);
+
+          if (aWins.length) {
+            locked = true;
+            winPanel.classList.remove('hidden');
+            noWinnerYet.classList.add('hidden');
+            winText.textContent = "Player A wins!";
+            winText.className = "mt-2 text-2xl font-black text-sky-800";
+            winDetail.textContent = "Sum(s) of 15: " + aWins.map(t => t.join(' + ')).join(', ');
+            winDetail.className = "mt-1 text-sky-700 font-medium italic";
+            confetti({
+              particleCount: 150,
+              spread: 70,
+              origin: { y: 0.6 },
+              colors: ['#0ea5e9', '#0284c7', '#ffffff']
+            });
+          } else if (bWins.length) {
+            locked = true;
+            winPanel.classList.remove('hidden');
+            noWinnerYet.classList.add('hidden');
+            winText.textContent = "Player B wins!";
+            winText.className = "mt-2 text-2xl font-black text-amber-800";
+            winDetail.textContent = "Sum(s) of 15: " + bWins.map(t => t.join(' + ')).join(', ');
+            winDetail.className = "mt-1 text-amber-700 font-medium italic";
+            confetti({
+              particleCount: 150,
+              spread: 70,
+              origin: { y: 0.6 },
+              colors: ['#f59e0b', '#d97706', '#ffffff']
+            });
+          } else if (history.length === 9) {
+            locked = true;
+            winPanel.classList.remove('hidden');
+            noWinnerYet.classList.add('hidden');
+            winText.textContent = "Draw!";
+            winText.className = "mt-2 text-2xl font-black text-slate-900";
+            winDetail.textContent = "No one reached 15.";
+          } else {
+            locked = false;
+            winPanel.classList.add('hidden');
+            noWinnerYet.classList.remove('hidden');
+          }
+
+          // Show "The Insight" only if locked (game over) AND in grid mode
+          pedagogySection.classList.toggle('hidden', !(locked && reveal));
+        }
+
+        function pickNumber(n) {
+          if (locked) return;
+          if (picks.A.has(n) || picks.B.has(n)) return;
+          picks[turn].add(n);
+          history.push({ num: n, player: turn });
+          turn = (turn === 'A') ? 'B' : 'A';
+          renderAll();
+        }
+
+        function undo() {
+          if (!history.length) return;
+          const last = history.pop();
+          picks[last.player].delete(last.num);
+          turn = last.player;
+          locked = false;
+          renderAll();
+        }
+
+        function reset() {
+          turn = 'A';
+          history = [];
+          picks = { A: new Set(), B: new Set() };
+          locked = false;
+          renderAll();
+        }
+
+        function setReveal(v) {
+          // FLIP Start
+          const oldPos = new Map();
+          Array.from(numberGrid.children).forEach(btn => {
+            oldPos.set(btn.textContent, btn.getBoundingClientRect());
+          });
+
+          reveal = v;
+          reset(); // User requested reset on toggle
+
+          revealBtn.textContent = "Rearrange"; // Always "Rearrange" as per latest request
+
+          renderAll();
+
+          // FLIP End (Slower, smoother animation)
+          requestAnimationFrame(() => {
+            Array.from(numberGrid.children).forEach(btn => {
+              const old = oldPos.get(btn.textContent);
+              if (!old) return;
+              const current = btn.getBoundingClientRect();
+              const dx = old.left - current.left;
+              const dy = old.top - current.top;
+
+              if (dx || dy) {
+                btn.animate([
+                  { transform: `translate(${dx}px, ${dy}px)` },
+                  { transform: 'translate(0, 0)' }
+                ], {
+                  duration: 1000,
+                  easing: 'ease-in-out' // Smoother, less springy
+                });
+              }
+            });
+          });
+        }
+
+        function renderAll() {
+          updateBadges();
+          updatePicksText();
+          updateWinState();
+          renderNumberBoard();
+        }
+
+        // Init
+        resetBtn.addEventListener('click', reset);
+        undoBtn.addEventListener('click', undo);
+        revealBtn.addEventListener('click', () => setReveal(!reveal));
+
+        document.addEventListener('keydown', (e) => {
+          const key = e.key;
+          if (key >= '1' && key <= '9') {
+            pickNumber(Number(key));
+          } else if (key === 'Backspace') {
+            e.preventDefault();
+            undo();
+          } else if (key === 'r' || key === 'R') {
+            reset();
+          } else if (key === 'm' || key === 'M') {
+            setReveal(!reveal);
+          }
+        });
+
+        // Start: linear mode
+        reveal = false;
+        reset();
+      })();
+  </script>
+</body>
+
+</html>
