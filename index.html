@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Course Widgets</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-slate-50 text-slate-900 min-h-screen">
+  <div class="max-w-4xl mx-auto p-6 md:p-10">
+    <header class="mb-12">
+      <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight mb-4">Course Widgets</h1>
+      <p class="text-xl text-slate-600 leading-relaxed">
+        A collection of interactive widgets and demos designed for computer science and data science lectures at Ghent
+        University.
+      </p>
+    </header>
+
+    <div class="space-y-8">
+      <h2 class="text-2xl font-bold text-slate-800 border-b border-slate-200 pb-2">Available Modules</h2>
+
+      <div class="grid md:grid-cols-1 gap-6">
+        <a class="block p-8 rounded-3xl border border-slate-200 bg-white hover:bg-white/80 hover:scale-[1.01] hover:shadow-xl transition-all duration-300 group"
+          href="./datavisualisation/index.html">
+          <div class="flex items-center justify-between mb-4">
+            <div class="text-2xl font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">Data
+              Visualisation</div>
+            <div
+              class="p-2 bg-indigo-50 text-indigo-600 rounded-xl group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
+          </div>
+          <p class="text-slate-600 text-lg leading-relaxed">
+            Interactive demos exploring preattentive processing, the Lie Factor (axis manipulation), and summary
+            statistics (Anscombe's Quartet).
+          </p>
+          <div class="mt-6 flex gap-3 flex-wrap">
+            <span class="px-3 py-1 bg-slate-100 text-slate-600 text-sm font-medium rounded-full">Anscombe's
+              Quartet</span>
+            <span class="px-3 py-1 bg-slate-100 text-slate-600 text-sm font-medium rounded-full">Axis
+              Manipulation</span>
+            <span class="px-3 py-1 bg-slate-100 text-slate-600 text-sm font-medium rounded-full">Preattentive
+              processing</span>
+          </div>
+        </a>
+      </div>
+    </div>
+
+    <footer class="mt-20 pt-8 border-t border-slate-200 text-slate-500 text-sm text-center">
+      Created for Data Science education. Deployed at <a href="https://bmesuere.github.io/course-widgets"
+        class="text-indigo-600 hover:underline">bmesuere.github.io/course-widgets</a>
+    </footer>
+  </div>
+</body>
+
+</html>
