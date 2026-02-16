@@ -436,7 +436,10 @@
           pclass: [{ type: "Ordinal", conceptual: "Discrete", measured: "Discrete", reasoning: ["Class has an order (1st/2nd/3rd) but not equal spacing."] }],
           name: [{ type: "Textual", conceptual: "Discrete", measured: "Discrete", reasoning: ["Free-form text; you’d use parsing/NLP, not arithmetic."] }],
           sex: [{ type: "Nominal", conceptual: "Discrete", measured: "Discrete", reasoning: ["Category label."] }],
-          age: [{ type: "Ratio", conceptual: "Continuous", measured: "Discrete", reasoning: ["Age is conceptually continuous, but here recorded/rounded in whole years (discrete measurement)."] }],
+          age: [
+            { type: "Ratio", conceptual: "Continuous", measured: "Discrete", reasoning: ["Age is conceptually continuous, but recorded/rounded in whole years (discrete measurement)."] },
+            { type: "Ratio", conceptual: "Continuous", measured: "Continuous", reasoning: ["Often treated as continuous despite integer rounding."] }
+          ],
           sibsp: [{ type: "Ratio", conceptual: "Discrete", measured: "Discrete", reasoning: ["Counts are ratio; zero means none."] }],
           parch: [{ type: "Ratio", conceptual: "Discrete", measured: "Discrete", reasoning: ["Counts are ratio; zero means none."] }],
           ticket: [{ type: "Nominal", conceptual: "Discrete", measured: "Discrete", reasoning: ["Ticket codes are identifiers."] }],
@@ -465,10 +468,22 @@
               "Arithmetic like mean(id) is meaningless; it’s only useful for referencing rows."
             ]
           }],
-          sepal_length: [{ type: "Ratio", conceptual: "Continuous", measured: "Continuous", reasoning: ["Length has a true zero and meaningful ratios."] }],
-          sepal_width: [{ type: "Ratio", conceptual: "Continuous", measured: "Continuous", reasoning: ["Same logic as sepal length."] }],
-          petal_length: [{ type: "Ratio", conceptual: "Continuous", measured: "Continuous", reasoning: ["Same logic as sepal length."] }],
-          petal_width: [{ type: "Ratio", conceptual: "Continuous", measured: "Continuous", reasoning: ["Same logic as sepal length."] }],
+          sepal_length: [
+            { type: "Ratio", conceptual: "Continuous", measured: "Continuous", reasoning: ["Length has a true zero and meaningful ratios."] },
+            { type: "Ratio", conceptual: "Continuous", measured: "Discrete", reasoning: ["Technically discrete due to rounding, but usually treated as continuous."] }
+          ],
+          sepal_width: [
+            { type: "Ratio", conceptual: "Continuous", measured: "Continuous", reasoning: ["Length has a true zero and meaningful ratios."] },
+            { type: "Ratio", conceptual: "Continuous", measured: "Discrete", reasoning: ["Technically discrete due to rounding, but usually treated as continuous."] }
+          ],
+          petal_length: [
+            { type: "Ratio", conceptual: "Continuous", measured: "Continuous", reasoning: ["Length has a true zero and meaningful ratios."] },
+            { type: "Ratio", conceptual: "Continuous", measured: "Discrete", reasoning: ["Technically discrete due to rounding, but usually treated as continuous."] }
+          ],
+          petal_width: [
+            { type: "Ratio", conceptual: "Continuous", measured: "Continuous", reasoning: ["Length has a true zero and meaningful ratios."] },
+            { type: "Ratio", conceptual: "Continuous", measured: "Discrete", reasoning: ["Technically discrete due to rounding, but usually treated as continuous."] }
+          ],
           species: [{ type: "Nominal", conceptual: "Discrete", measured: "Discrete", reasoning: ["Species categories have no inherent order; counts and proportions are meaningful."] }]
         }
       },
@@ -494,10 +509,19 @@
             ]
           }],
           device_id: [{ type: "Nominal", conceptual: "Discrete", measured: "Discrete", reasoning: ["Device IDs are labels, even if they contain digits."] }],
-          power_w: [{ type: "Ratio", conceptual: "Continuous", measured: "Discrete", reasoning: ["Power has a true zero; sensors often quantize readings."] }],
+          power_w: [
+            { type: "Ratio", conceptual: "Continuous", measured: "Discrete", reasoning: ["Power has a true zero; sensors often quantize readings."] },
+            { type: "Ratio", conceptual: "Continuous", measured: "Continuous", reasoning: ["Usually treated as continuous logic for analysis."] }
+          ],
           energy_kwh: [{ type: "Ratio", conceptual: "Continuous", measured: "Continuous", reasoning: ["Energy has a true zero; ratios meaningful."] }],
-          temperature_c: [{ type: "Interval", conceptual: "Continuous", measured: "Continuous", reasoning: ["°C has an arbitrary zero; differences meaningful, ratios not (use Kelvin for ratios)."] }],
-          humidity_pct: [{ type: "Ratio", conceptual: "Continuous", measured: "Discrete", reasoning: ["Percentage has a meaningful zero; readings are often quantized."] }],
+          temperature_c: [
+            { type: "Interval", conceptual: "Continuous", measured: "Continuous", reasoning: ["°C has an arbitrary zero; differences meaningful."] },
+            { type: "Interval", conceptual: "Continuous", measured: "Discrete", reasoning: ["Technically discrete due to rounding."] }
+          ],
+          humidity_pct: [
+            { type: "Ratio", conceptual: "Continuous", measured: "Discrete", reasoning: ["Percentage has a meaningful zero; readings are often quantized."] },
+            { type: "Ratio", conceptual: "Continuous", measured: "Continuous", reasoning: ["Usually treated as continuous."] }
+          ],
           status: [{ type: "Nominal", conceptual: "Discrete", measured: "Discrete", reasoning: ["Labels like ok/spike."] }]
         }
       },
